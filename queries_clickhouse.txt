@@ -1,0 +1,49 @@
+[Version]
+SELECT version()
+
+[Server Uptime]
+SELECT uptime() as uptime
+
+[Cluster Overview]
+SELECT cluster, shard_num, replica_num, host_name, host_address, port, is_local, errors_count, slowdowns_count 
+FROM system.clusters;
+
+[Disk Usage]
+SELECT
+    name as Name,
+    path as Path,
+    formatReadableSize(free_space) as Free,
+    formatReadableSize(total_space) as Total,
+    1 - free_space/total_space as Used
+FROM system.disks
+
+[Total Queries]
+SELECT count() as "Total queries" 
+FROM system.query_log 
+WHERE type in ('QueryStart','QueryFinish','ExceptionBeforeStart','ExceptionWhileProcessing') AND initial_user IN ('default') AND query_kind IN ('Select','Insert','Drop','Describe','None','Show','KillQuery','Create','Use','Alter','System','Rename','Set','Explain','Backup','Delete') AND $__timeFilter(event_time)
+
+[Avg query memory]
+SELECT avg(memory_usage) as "Avg query memory", $__timeInterval(query_start_time) as time FROM system.query_log WHERE type in ('QueryStart','QueryFinish','ExceptionBeforeStart','ExceptionWhileProcessing') AND initial_user IN ('default') AND query_kind IN ('Select','Create','Show','Insert','Drop','Use','None','Describe','KillQuery','System','Alter','Rename','Set','Backup','Explain','Delete') AND $__timeFilter(event_time) GROUP BY time ORDER BY time
+
+[Avg query time]
+SELECT avg(query_duration_ms) as "Avg query time", $__timeInterval(query_start_time) as time FROM system.query_log WHERE type in ('QueryStart','QueryFinish','ExceptionBeforeStart','ExceptionWhileProcessing') AND initial_user IN ('default') AND query_kind IN ('Insert','Select','None','Describe','Explain','Show','Create','Use','Drop','System','Rename','KillQuery','Alter','Set','Delete','Backup') AND $__timeFilter(event_time) GROUP BY time ORDER BY time
+
+[Current Mutations]
+SELECT concatAssumeInjective(database, '.', table) as db_table, mutation_id, command, create_time, parts_to_do_names, is_done, latest_failed_part, if(latest_fail_time = '1970-01-01 00:00:00', 'success', 'failure') as success, if(latest_fail_time = '1970-01-01 00:00:00', '-', CAST(latest_fail_time, 'String')) as fail_time, latest_fail_reason 
+FROM system.mutations WHERE database IN ('INFORMATION_SCHEMA','ai','ai_test','default','information_schema','nwdaf','nwdaf_test','sql_tune','system') 
+ORDER BY is_done ASC, create_time DESC LIMIT 10
+
+[Memory usage over time]
+SELECT $__timeInterval(query_start_time) as time, 
+      max(memory_usage) as "Max Memory Usage"
+FROM system.query_log
+WHERE $__timeFilter(event_time)
+GROUP BY time
+ORDER BY time DESC
+
+# 복제 대상 테이블 복제 상태 확인
+SELECT * FROM system.replication_queue WHERE table = 'your_table' FORMAT Vertical;
+
+# 혹은
+grep -i "Replica" /var/log/clickhouse-server/clickhouse-server.log
+
