@@ -1,18 +1,16 @@
 #!/bin/bash
 
 # 조회할 네임스페이스 목록
-namespaces=("nwdaf" "strimzi-kafka" "kubeflow" "istio-system" "knative-serving" "cert-manager" "infra-monitor" "argo-events" "infra-log" "infra-datastore" "infra-deploy" "nwdaf-webhook" "auth" "oauth2-proxy" "kubeflow-user-example-com")
+namespaces=("nwdaf" "strimzi-kafka" "kubeflow" "istio-system" "cert-manager" "infra-monitor" "infra-log" "infra-datastore" "infra-deploy" "nwdaf-webhook" "nwdaf-local-path" "auth" "oauth2-proxy" "metallb-system" "kubeflow-user-example-com")
 
 # 워커 노드 목록
-nodes=("bdtb-sa03a-nwdaf-wk01.ocp03.skt.local" "bdtb-sa03a-nwdaf-wk02.ocp03.skt.local" "bdtb-sa03a-nwdaf-wk03.ocp03.skt.local" "bdtb-sa03a-aisfm-wk01.ocp03.skt.local" "bdtb-sa03a-aisfm-gpuwk01.ocp03.skt.local")
+nodes=("snsu-5g21b-nwdaf-wk01.ocp21.skt.local" "snsu-5g21b-nwdaf-wk02.ocp21.skt.local" "snsu-5g21b-nwdaf-wk03.ocp21.skt.local")
 
 # 노드명을 간단하게 출력하기 위한 매핑
 declare -A node_name_map
-node_name_map["bdtb-sa03a-nwdaf-wk01.ocp03.skt.local"]="worker-1"
-node_name_map["bdtb-sa03a-nwdaf-wk02.ocp03.skt.local"]="worker-2"
-node_name_map["bdtb-sa03a-nwdaf-wk03.ocp03.skt.local"]="worker-3"
-node_name_map["bdtb-sa03a-aisfm-wk01.ocp03.skt.local"]="cnaps-1"
-node_name_map["bdtb-sa03a-aisfm-gpuwk01.ocp03.skt.local"]="cnaps-2"
+node_name_map["snsu-5g21b-nwdaf-wk01.ocp21.skt.local"]="worker-1"
+node_name_map["snsu-5g21b-nwdaf-wk02.ocp21.skt.local"]="worker-2"
+node_name_map["snsu-5g21b-nwdaf-wk03.ocp21.skt.local"]="worker-3"
 
 # 긴 네임스페이스 이름을 20자로 제한하는 함수
 truncate_namespace() {
@@ -32,7 +30,7 @@ echo "  B: 해당 노드에서 실행 중인 전체 Pod 개수"
 echo
 
 # 테이블 헤더 출력
-printf "%-20s %-15s %-15s %-15s %-15s %-15s\n" "Namespace" "worker-1" "worker-2" "worker-3" "cnaps-1" "cnaps-2"
+printf "%-20s %-15s %-15s %-15s\n" "Namespace" "worker-1" "worker-2" "worker-3"
 echo "------------------------------------------------------------------------------------------"
 
 # 네임스페이스별로 Pod 개수 카운트

@@ -1,0 +1,51 @@
+INSERT INTO cell_usage_hist_5m
+with 
+toDateTime('2025-06-10 01:15:00') as source_start, 
+toDateTime('2025-06-11 01:10:00') as source_end,
+source_table as (
+SELECT
+*
+FROM
+cell_usage_hist_5m
+WHERE window_start >= source_start AND window_start <= source_end
+),
+toIntervalHour(336) as shift
+SELECT 
+enb_cell_id,
+cell_type,
+freq_type,
+window_start - shift as window_start,
+window_end - shift as window_end,
+COALESCE(toDayOfWeek(window_start), 0) as day_of_week,
+CASE WHEN day_of_week >= 6 THEN 1 ELSE 0 END as is_weekend,
+COALESCE(toHour(window_start), 0) as hh,
+total_user_count,
+heavy_user_count,
+medium2_user_count,
+medium1_user_count,
+light_user_count,
+total_user_count_5m,
+heavy_user_count_5m,
+medium2_user_count_5m,
+medium1_user_count_5m,
+light_user_count_5m,
+total_user_count_avg,
+total_user_count_rate,
+total_user_count_rate_5m,
+total_user_usage,
+heavy_user_usage,
+medium2_user_usage,
+medium1_user_usage,
+light_user_usage,
+total_user_usage_5m,
+heavy_user_usage_5m,
+medium2_user_usage_5m,
+medium1_user_usage_5m,
+light_user_usage_5m,
+total_user_usage_avg,
+total_user_usage_rate,
+total_user_usage_rate_5m,
+duration,
+duration_5m,
+prb_usage_rate
+FROM source_table;

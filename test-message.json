@@ -46,7 +46,7 @@
   "created_at": "2025-05-19T13:18:28+00:00",
   "window_end": "2025-05-19T13:18:00+00:00",
   "min": "1092105121",
-  "mdn": "821092105121",
+  "mdn": "01092105121",
   "cell_id": "1825:12",
   "cell_type": "lte",
   "cell_group_id": "80e30677-987f-4af5-9d9f-e9ee22aea98e",
@@ -73,8 +73,10 @@
 {"created_at": "2025-05-19T13:19:28+00:00", "window_end": "2025-05-19T02:19:00+00:00", "min": "1092105121", "mdn": "821092105121", "cell_id": "1825:12", "cell_type": "lte", "cell_group_id": "80e30677-987f-4af5-9d9f-e9ee22aea98e", "user_speed_threshold": 0, "user_control_speed": 7000000, "user_control_qos": "QoS7M_NoGBR", "prb_usage_threshold": 0, "prb_usage_predicted": 2, "timer": 60, "cron": "* 2-31 4-5 * 2025", "cron_startdate": "2025-04-02", "cron_enddate": "2025-05-31", "dl_usage": 982719560, "ul_usage": 105188, "duration": 20, "dl_bps": 3829061660, "ul_bps": 42075, "user_grade": "heavy", "pgw_ip": "10.20.30.40", "pgw_region_code": 0}
 
 
-{"created_at":"2025-05-19T05:18:27+00:00","window_end":"2025-05-19T05:18:00+00:00","min":"1092105121","mdn":"821092105121","cell_id":"1186831:0","cell_type":"5g","cell_group_id":"80e30677-987f-4af5-9d9f-e9ee22aea98e","user_speed_threshold":0,"user_control_speed":7000000,"user_control_qos":"QoS7M_NoGBR","prb_usage_threshold":0,"prb_usage_predicted":42,"timer":60,"cron":"{\"cron\":\"* 2-31 4-5 * 2025\",\"startdate\":\"2025-04-02\",\"enddate\":\"2025-05-31\"}","dl_usage":1766806977,"ul_usage":124971,"duration":17,"dl_bps":2852599657,"ul_bps":58809,"user_grade":"heavy","pgw_ip":"10.20.30.40","pgw_region_code":0}
+./kafka-console-producer.sh --broker-list kafka-kafka-bootstrap.strimzi-kafka:9092 --topic usercontrol
+{"created_at":"2025-05-20T04:52:27+00:00","window_end":"2025-05-20T04:52:00+00:00","min":"1092105121","mdn":"01092105121","cell_id":"1186831:0","cell_type":"5g","cell_group_id":"testGroup","user_speed_threshold":0,"user_control_speed":7000000,"user_control_qos":"QoS7M_NoGBR","prb_usage_threshold":0,"prb_usage_predicted":80,"timer":60,"cron":"{\"cron\":\"* 2-31 4-5 * 2025\",\"startdate\":\"2025-04-02\",\"enddate\":\"2025-05-31\"}","dl_usage":1766806977,"ul_usage":124971,"duration":17,"dl_bps":2852599657,"ul_bps":58809,"user_grade":"heavy","pgw_ip":"10.20.30.40","pgw_region_code":0}
 
+{"created_at":"2025-05-20T06:58:25+00:00","window_end":"2025-05-20T06:58:00+00:00","min":"1012340004","mdn":"01012340004","cell_id":"1000:2","cell_type":"5g","cell_group_id":"exampleGroupName","user_speed_threshold":6000000,"user_control_speed":6000000,"user_control_qos":"QoS5M_NoGBR","prb_usage_predicted":6,"congestion_score":100,"timer":60,"dl_usage":10240000,"ul_usage":512,"duration":10,"dl_bps":8192000,"ul_bps":409,"user_grade":"medium1","pgw_ip":"172.28.52.84","pgw_region_code":1}
 
 
 SELECT *
