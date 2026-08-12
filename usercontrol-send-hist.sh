@@ -15,8 +15,24 @@ else
   oc exec -i -n nwdaf clickhouse-shard0-0 -c clickhouse -- bash -c \
   "echo 'SELECT id, cell_group_name FROM nwdaf.conn_pgsql_t_cell_group_config FORMAT PrettyCompact' | clickhouse client --password \${CLICKHOUSE_ADMIN_PASSWORD}"
   read -p "Cell Group ID 선택(전체 조회시 Enter): " CELL_GROUP_ID
-  read -p "시작 시간 입력(예: 2025-10-29 11:00:00): " START_TIME
-  read -p "종료 시간 입력(예: 2025-10-30 14:00:00): " END_TIME
+  read -p "시작 시간 입력(예: 2025-10-29 11:00:00, Enter시 최소값): " START_TIME
+  read -p "종료 시간 입력(예: 2025-10-30 14:00:00, Enter시 최대값): " END_TIME
+
+  # 시작 시간이 비어있으면 테이블의 최소 window_end 조회
+  if [[ -z "$START_TIME" ]]; then
+    echo "시작 시간이 입력되지 않아 테이블의 최소 window_end를 조회합니다..."
+    START_TIME=$(oc exec -i -n nwdaf clickhouse-shard0-0 -c clickhouse -- bash -c \
+      "echo 'SELECT toString(MIN(window_end)) FROM nwdaf.t_user_control_send_hist' | clickhouse client --password \${CLICKHOUSE_ADMIN_PASSWORD}" | tr -d '\r\n')
+    echo "조회된 시작 시간: ${START_TIME}"
+  fi
+
+  # 종료 시간이 비어있으면 테이블의 최대 window_end 조회
+  if [[ -z "$END_TIME" ]]; then
+    echo "종료 시간이 입력되지 않아 테이블의 최대 window_end를 조회합니다..."
+    END_TIME=$(oc exec -i -n nwdaf clickhouse-shard0-0 -c clickhouse -- bash -c \
+      "echo 'SELECT toString(MAX(window_end)) FROM nwdaf.t_user_control_send_hist' | clickhouse client --password \${CLICKHOUSE_ADMIN_PASSWORD}" | tr -d '\r\n')
+    echo "조회된 종료 시간: ${END_TIME}"
+  fi
 
   # 입력값을 env 파일에 저장
   cat > "$ENV_FILE" <<EOF

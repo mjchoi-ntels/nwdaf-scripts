@@ -22,14 +22,43 @@ fi
 
 # 2. K8S 노드별 시스템 부하 상태
 echo "[2] K8S 노드별 시스템 부하 상태"
-oc adm top nodes
-cpu_over=$(oc adm top nodes --no-headers | awk '$3+0 > 90 {print $1":"$3}')
-mem_over=$(oc adm top nodes --no-headers | awk '$5+0 > 90 {print $1":"$5}')
-cpu_warn=$(oc adm top nodes --no-headers | awk '$3+0 > 70 && $3+0 <= 90 {print $1":"$3}')
-mem_warn=$(oc adm top nodes --no-headers | awk '$5+0 > 70 && $5+0 <= 90 {print $1":"$5}')
+
+# 점검할 노드 목록 (ma1~3, nwdaf-wk01~03)
+NODES=(
+  "bdtb-sa03a-ma1.ocp03.skt.local"
+  "bdtb-sa03a-ma2.ocp03.skt.local"
+  "bdtb-sa03a-ma3.ocp03.skt.local"
+  "bdtb-sa03a-nwdaf-wk01.ocp03.skt.local"
+  "bdtb-sa03a-nwdaf-wk02.ocp03.skt.local"
+  "bdtb-sa03a-nwdaf-wk03.ocp03.skt.local"
+)
+
+oc adm top nodes | head -1 # 헤더 출력
+cpu_over=""
+mem_over=""
+cpu_warn=""
+mem_warn=""
+
+for node in "${NODES[@]}"; do
+    line=$(oc adm top nodes --no-headers | grep "^$node ")
+    [ -z "$line" ] && continue
+    cpu_pct=$(echo "$line" | awk '{print $3}' | sed 's/%//')
+    mem_pct=$(echo "$line" | awk '{print $5}' | sed 's/%//')
+    if [[ $cpu_pct -gt 90 ]]; then
+        cpu_over+="$node:$cpu_pct% "
+    elif [[ $cpu_pct -gt 70 ]]; then
+        cpu_warn+="$node:$cpu_pct% "
+    fi
+    if [[ $mem_pct -gt 90 ]]; then
+        mem_over+="$node:$mem_pct% "
+    elif [[ $mem_pct -gt 70 ]]; then
+        mem_warn+="$node:$mem_pct% "
+    fi
+    echo "$line"
+done
 
 if [[ -z "$cpu_over" && -z "$mem_over" && -z "$cpu_warn" && -z "$mem_warn" ]]; then
-    echo "=> 모든 노드의 CPU/Memory 부하가 70% 이하입니다. [OK]"
+    echo "=> 지정 노드의 CPU/Memory 부하가 70% 이하입니다. [OK]"
 else
     if [[ -n "$cpu_over" || -n "$mem_over" ]]; then
         echo "=> CPU/Memory 부하가 90%를 초과한 노드가 있습니다."

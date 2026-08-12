@@ -43,6 +43,7 @@ done
 
 #!/bin/bash
 # filepath: d:\7. Personal\git\scripts\usercontrol-send.sh
+# 성능 개선을 위해 모든 라인을 한 번에 처리하여 Kafka로 전송하는 방식으로 변경
 
 while true; do
   # 현재 UTC 시간(T%H:%M) 변수에 저장
