@@ -755,8 +755,22 @@ check_ai() {
 
     echo ""
     echo "[5] 학습 히스토리 조회"
-    model_seq_result=$(oc exec -n nwdaf "${CH_POD:-clickhouse-shard0-0}" -- bash -c 'clickhouse-client --password ${CLICKHOUSE_ADMIN_PASSWORD} -d nwdaf -q "SELECT model_type, excution_end, model_seq, cell_count, train_result FROM ai.model_train_hist ORDER BY model_seq DESC LIMIT 20"' 2>/dev/null || true)
-    echo "$model_seq_result" | grep Success || true
+    # xgboost 학습 이력만 조회. train_result는 긴 JSON이므로 status 값만 추출하여 간결하게 출력/판정
+    model_seq_result=$(oc exec -n nwdaf "${CH_POD:-clickhouse-shard0-0}" -- bash -c 'clickhouse-client --password ${CLICKHOUSE_ADMIN_PASSWORD} -d nwdaf -q "SELECT model_type, cell_type, excution_end, model_seq, cell_count, JSONExtractString(train_result, '\''status'\'') AS status FROM ai.model_train_hist WHERE model_type = '\''xgboost'\'' ORDER BY model_seq DESC LIMIT 20"' 2>/dev/null || true)
+    model_seq_rows=$(echo "$model_seq_result" | sed '/^[[:space:]]*$/d' | wc -l | tr -d ' ')
+    # 최근 20건 중 status=SUCCESS 건수 (대소문자 무시)
+    success_cnt=$(echo "$model_seq_result" | grep -ic 'SUCCESS' || true)
+    if [[ -z "${model_seq_result//[[:space:]]/}" || "$model_seq_rows" -eq 0 ]]; then
+        report "AI Train History" "CRITICAL" "xgboost 학습 이력 없음"
+    elif [[ "$success_cnt" -ge 1 ]]; then
+        report "AI Train History" "OK" "xgboost 학습 이력 확인 (SUCCESS ${success_cnt}건)"
+    else
+        report "AI Train History" "WARNING" "최근 xgboost 학습에 SUCCESS 없음"
+    fi
+    # 헤더와 함께 status가 축약된 이력 출력
+    if [[ -n "${model_seq_result//[[:space:]]/}" ]]; then
+        echo "$model_seq_result" | awk 'NF>=6 {printf "  %-8s %-6s %-19s %-12s %-6s %s\n", $1, $2, $3" "$4, $5, $6, $7}'
+    fi
 
     echo ""
     echo "[6] 모델 히스토리 및 파일 점검"
