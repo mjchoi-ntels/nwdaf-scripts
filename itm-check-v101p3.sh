@@ -790,6 +790,15 @@ check_ai() {
         echo "=> XGBoost 모델 파일 존재 확인 [OK]"
         report "MinIO Model Files" "OK" "XGBoost 파일 존재"
     fi
+
+    echo ""
+    echo "[7] 현재 적용 중인 모델 버전"
+    # prb-predict-0 파드에서 각 모델의 현재 적용 버전 조회 (단순 확인 -> INFO)
+    VER_XGB=$(oc exec -n nwdaf prb-predict-0 -- python ai/Model/version2/exec_get_current_version.py xgboost 2>/dev/null | tr -d '[:space:]')
+    VER_XGB_5G=$(oc exec -n nwdaf prb-predict-0 -- python ai/Model/version2/exec_get_current_version.py xgboost_5g 2>/dev/null | tr -d '[:space:]')
+    echo "  xgboost    : ${VER_XGB:-조회 실패}"
+    echo "  xgboost_5g : ${VER_XGB_5G:-조회 실패}"
+    report "AI Model Version" "OK" "xgboost: ${VER_XGB:-N/A}, xgboost_5g: ${VER_XGB_5G:-N/A}"
 }
 
 check_db_disk() {
