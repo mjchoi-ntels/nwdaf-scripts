@@ -3,7 +3,7 @@
 # ./curl_req.sh <method> <uri> [dataFile]
 
 # Script 설정
-apiToken="glsa_WT4nrjU18FarQf93H4m7VTZQtSzENave_78c1a167"  # API 토큰
+apiToken="${GRAFANA_API_TOKEN:?환경변수 GRAFANA_API_TOKEN 를 설정하세요 (예: export GRAFANA_API_TOKEN=glsa_xxx)}"  # API 토큰 (환경변수로 주입)
 destIp="60.15.24.5"                                     # 목적지 IP
 destPort="31936"                                           # 목적지 포트
 grafanaSvc="infra-monitor-grafana.infra-monitor.svc"
