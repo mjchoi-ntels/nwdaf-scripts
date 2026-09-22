@@ -14,6 +14,11 @@ NAMESPACE="kubeflow"
 LOCAL_DEST="/home/core/BACKUP"
 TARGET_DIR="/home/bkms/BACKUP"
 CONTAINER="minio"
+# !!! 실제 적용 시 주의 !!!
+# 1) 아래 DECODE_ACCESS / DECODE_SECRET 에 실제 MinIO 자격증명을 주입할 것
+#    (또는 위의 'source .env_ocpwd' 방식 복원 후 base64 디코딩 사용)
+# 2) 자격증명 주입 후 반드시 shc 로 바이너리화하여 배포할 것
+#    예) shc -f minio_backup.sh -o minio_backup
 DECODE_ACCESS=
 DECODE_SECRET=
 
