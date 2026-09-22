@@ -2,7 +2,7 @@
 
 export PATH=/usr/local/bin:/usr/bin:/bin
 export KUBECONFIG=$(/home/core/ocp/config/auth/login/00-login.sh)
-source /home/core/nwdaf-pkg/.env_ocpwd
+#source /home/core/nwdaf-pkg/.env_ocpwd
 echo "${KUBECONFIG}"
 
 # OpenShift 로그인
@@ -14,8 +14,8 @@ NAMESPACE="kubeflow"
 LOCAL_DEST="/home/core/BACKUP"
 TARGET_DIR="/home/bkms/BACKUP"
 CONTAINER="minio"
-DECODE_ACCESS=$(echo "$MNO_ACCESS" | base64 -d)
-DECODE_SECRET=$(echo "$MNO_SECRET" | base64 -d)
+DECODE_ACCESS=
+DECODE_SECRET=
 
 # Find the first Running minio-nwdaf pod
 POD=$(oc get pod -n "$NAMESPACE" | awk '/minio-nwdaf/ && /Running/ {print $1; exit}')
