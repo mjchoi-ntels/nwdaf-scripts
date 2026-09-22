@@ -9,7 +9,7 @@ echo "${KUBECONFIG}"
 /home/core/oc_login.sh
 
 # Models to back up
-MODELS=("lstm_model" "gru_model")
+MODELS=("xgboost_model" "xgboost_5g_model")
 NAMESPACE="kubeflow"
 LOCAL_DEST="/home/core/BACKUP"
 TARGET_DIR="/home/bkms/BACKUP"
@@ -35,7 +35,7 @@ oc exec -n "$NAMESPACE" "$POD" -c "$CONTAINER" -- \
 for model in "${MODELS[@]}"; do
   echo "Backing up model: $model"
   oc exec -n "$NAMESPACE" "$POD" -c "$CONTAINER" -- \
-    sh -c "mc cp --recursive local/model-repo/$model /tmp/backup/$model"
+    sh -c "mc mirror local/model-repo/${model}/ /tmp/backup/${model}/"
   oc cp "$NAMESPACE/$POD:/tmp/backup/$model" "$LOCAL_DEST/$model"
 
   # Tar the backed up directory with the format: directory_yyyymmdd.tar
