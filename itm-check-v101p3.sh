@@ -716,41 +716,27 @@ check_ai() {
 
     echo ""
     echo "[4] 학습용 데이터셋 적재 상태 체크"
-    # LIMIT 8 = 최신 4개 window x (lte, 5g) 2종 -> 직전 완결 window 판정 및 최근 추이 확인에 충분
-    TRAIN_INFER_DATA=$(oc exec -n nwdaf "${CH_POD:-clickhouse-shard0-0}" -- bash -c 'clickhouse-client --password ${CLICKHOUSE_ADMIN_PASSWORD} -d nwdaf -q "SELECT window_end, cell_type, count() FROM ai.cell_usage_infer_5m GROUP BY 1, 2 ORDER BY 1 DESC, 2 DESC LIMIT 8"' 2>/dev/null || true)
-    # window_end가 날짜+시간으로 분리되어 출력됨: 날짜 시간 cell_type count
+    # window_end는 UTC 기준이며 현재시각보다 약 1시간 지연 기록되므로, 현재시각-80분
+    # 시간 창으로 조회해 지연을 흡수한다. (LIMIT으로 자르면 lte/5g 수신 개수 차이 때문에
+    # 행이 잘려 카운트가 왜곡되므로 시간 창으로 자른다.)
+    # 판정: lte는 5분 주기(1 window당 1행), 5g는 15분 주기(수신 시 5분 슬롯 3행을 한꺼번에 채움).
+    #       정상 상태에서 lte가 5g보다 앞설 수 있는 최대치는 2행이므로,
+    #       (lte 행 수 - 5g 행 수) < 3 이면 정상, >= 3 이면 5g가 한 주기 이상 누락된 것으로 CRITICAL.
+    TRAIN_INFER_DATA=$(oc exec -n nwdaf "${CH_POD:-clickhouse-shard0-0}" -- bash -c 'clickhouse-client --password ${CLICKHOUSE_ADMIN_PASSWORD} -d nwdaf -q "SELECT window_end, cell_type, count() FROM ai.cell_usage_infer_5m WHERE window_end >= now() - toIntervalMinute(80) GROUP BY 1, 2 ORDER BY 1 DESC, 2 DESC"' 2>/dev/null || true)
     TRAIN_INFER_ROWS=$(echo "$TRAIN_INFER_DATA" | sed '/^[[:space:]]*$/d' | wc -l | tr -d ' ')
-    if [[ -n "${TRAIN_INFER_DATA//[[:space:]]/}" && "$TRAIN_INFER_ROWS" -ge 1 ]]; then
-        LATEST_DT=$(echo "$TRAIN_INFER_DATA" | awk 'NR==1 && NF>=4 {print $1" "$2}')
-        IS_RECENT=0
-        if [[ -n "$LATEST_DT" ]]; then
-            LATEST_TS=$(TZ=UTC date --date="$LATEST_DT" +%s 2>/dev/null || echo 0)
-            NOW_TS=$(TZ=UTC date +%s)
-            EIGHTY_MIN_AGO=$((NOW_TS - 4800))
-            [[ $LATEST_TS -ge $EIGHTY_MIN_AGO ]] && IS_RECENT=1
-        fi
-        HAS_LTE=$(echo "$TRAIN_INFER_DATA" | awk 'NF>=3 && $3=="lte" {found=1} END{print found+0}')
-        HAS_5G=$(echo "$TRAIN_INFER_DATA" | awk 'NF>=3 && $3=="5g" {found=1} END{print found+0}')
-        # 5g는 lte보다 다소 늦게 생성될 수 있으므로 가장 최신 window는 grace 처리하고,
-        # 직전 완결 window(PREV_DT)에 lte/5g가 함께 있는지로 5g 5분 주기 적재를 판정
-        PREV_DT=$(echo "$TRAIN_INFER_DATA" | awk -v d="$LATEST_DT" 'NF>=4 {w=$1" "$2; if(w!=d){print w; exit}}')
-        PREV_HAS_LTE=$(echo "$TRAIN_INFER_DATA" | awk -v d="$PREV_DT" 'NF>=4 && ($1" "$2)==d && $3=="lte" {found=1} END{print found+0}')
-        PREV_HAS_5G=$(echo "$TRAIN_INFER_DATA" | awk -v d="$PREV_DT" 'NF>=4 && ($1" "$2)==d && $3=="5g" {found=1} END{print found+0}')
-        if [[ "$IS_RECENT" -eq 1 && "$HAS_LTE" -eq 1 && "$HAS_5G" -eq 1 && "$PREV_HAS_LTE" -eq 1 && "$PREV_HAS_5G" -eq 1 ]]; then
-            report "AI TrainDataset" "OK" "80분 내 lte/5g 데이터 확인 (5g 5분 주기 적재 정상)"
+    if [[ -z "${TRAIN_INFER_DATA//[[:space:]]/}" || "$TRAIN_INFER_ROWS" -lt 1 ]]; then
+        # 80분 창에 데이터가 전혀 없음 = 데이터 수신부 문제
+        report "AI TrainDataset" "CRITICAL" "최근 80분 내 데이터 없음 (수신부 점검 필요)"
+    else
+        LTE_CNT=$(echo "$TRAIN_INFER_DATA" | awk 'NF>=3 && $3=="lte"' | sed '/^[[:space:]]*$/d' | wc -l | tr -d ' ')
+        FIVE_G_CNT=$(echo "$TRAIN_INFER_DATA" | awk 'NF>=3 && $3=="5g"' | sed '/^[[:space:]]*$/d' | wc -l | tr -d ' ')
+        DIFF=$((LTE_CNT - FIVE_G_CNT))
+        if [[ "$DIFF" -lt 3 ]]; then
+            report "AI TrainDataset" "OK" "80분 내 lte/5g 적재 정상 (lte:${LTE_CNT}, 5g:${FIVE_G_CNT}, 차이:${DIFF})"
         else
-            ti_detail=""
-            [[ "$IS_RECENT" -eq 0 ]] && ti_detail="최근 80분 내 데이터 없음"
-            [[ "$HAS_LTE" -ne 1 ]] && ti_detail="${ti_detail:+$ti_detail, }lte 데이터 없음"
-            [[ "$HAS_5G" -ne 1 ]] && ti_detail="${ti_detail:+$ti_detail, }5g 데이터 없음"
-            # 직전 완결 window에도 5g가 빠진 경우 -> 단순 지연이 아니라 5g 5분 주기 이상으로 판정
-            [[ "$HAS_5G" -eq 1 && "$PREV_HAS_5G" -ne 1 ]] && ti_detail="${ti_detail:+$ti_detail, }직전 5분 window에 5g 미적재 (5g 5분 주기 이상)"
-            [[ "$HAS_LTE" -eq 1 && "$PREV_HAS_LTE" -ne 1 ]] && ti_detail="${ti_detail:+$ti_detail, }직전 5분 window에 lte 미적재"
-            report "AI TrainDataset" "CRITICAL" "$ti_detail"
+            report "AI TrainDataset" "CRITICAL" "5g 적재 지연/누락 의심 (lte:${LTE_CNT}, 5g:${FIVE_G_CNT}, 차이:${DIFF} >= 3)"
         fi
         echo "$TRAIN_INFER_DATA" | sed 's/^/  /'
-    else
-        report "AI TrainDataset" "CRITICAL" "데이터 없음"
     fi
 
     echo ""
